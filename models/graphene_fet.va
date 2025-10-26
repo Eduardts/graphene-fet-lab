@@ -1,0 +1,70 @@
+// Verilog-A model for Graphene Field-Effect Transistor (GFET)
+// Simplified compact model for circuit simulation
+
+`include "constants.vams"
+`include "disciplines.vams"
+
+module graphene_fet(drain, gate, source);
+    inout drain, gate, source;
+    electrical drain, gate, source;
+    
+    // Model parameters
+    parameter real W = 10e-6 from [0:inf);        // Channel width (m)
+    parameter real L = 1e-6 from [0:inf);         // Channel length (m)
+    parameter real Cox = 1.15e-8 from [0:inf);    // Gate oxide capacitance (F/cm^2)
+    parameter real vF = 1e6 from [0:inf);         // Fermi velocity (m/s)
+    parameter real mu = 10000 from [0:inf);       // Mobility (cm^2/V·s)
+    parameter real Vdirac = 0.0;                  // Dirac point voltage (V)
+    parameter real T = 300.0 from [0:inf);        // Temperature (K)
+    parameter real Rs = 100.0 from [0:inf);       // Source resistance (Ohm)
+    parameter real Rd = 100.0 from [0:inf);       // Drain resistance (Ohm)
+    
+    // Internal variables
+    real Vgs, Vds, Vds_eff, Vgs_eff;
+    real n, n_gate, n_total;
+    real Ids, gm, gds;
+    real alpha, beta;
+    
+    analog begin
+        // Get terminal voltages
+        Vgs = V(gate, source);
+        Vds = V(drain, source);
+        
+        // Effective voltages accounting for series resistances
+        Vgs_eff = Vgs;
+        Vds_eff = Vds;
+        
+        // Calculate carrier density
+        // n_gate = Cox * (Vgs_eff - Vdirac) / `P_Q
+        n_gate = Cox * 1e4 * (Vgs_eff - Vdirac) / 1.6e-19;  // Convert to cm^-2
+        
+        // Residual carrier density (doping, impurities)
+        n = sqrt(n_gate * n_gate + 1e10 * 1e10);  // n_min = 1e10 cm^-2
+        
+        // Conductivity (simplified Drude model)
+        alpha = `P_Q * mu * n / (W * L);
+        
+        // Drain current in linear/saturation regions
+        if (abs(Vds_eff) < 0.1) begin
+            // Linear region
+            Ids = alpha * Vds_eff;
+        end else begin
+            // Saturation region
+            beta = vF * sqrt(`M_PI * n);  // Saturation velocity
+            Ids = W * `P_Q * n * beta * tanh(Vds_eff / (2.0 * L * beta / mu));
+        end
+        
+        // Add series resistance effects
+        Ids = Ids / (1.0 + (Rs + Rd) * alpha);
+        
+        // Current contributions
+        I(drain, source) <+ Ids;
+        
+        // Gate leakage (negligible for good oxide)
+        I(gate, source) <+ 1e-15 * Vgs;
+        
+        // Capacitances (simplified)
+        I(gate, source) <+ ddt(Cox * W * L * Vgs);
+        I(drain, gate) <+ ddt(0.5 * Cox * W * L * V(drain, gate));
+    end
+endmodule
