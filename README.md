@@ -15,7 +15,7 @@ This project provides tools for simulating graphene FET devices, including:
 ```
 graphene-fet-lab/
 ├── models/
-│   └── graphene_fet.va         # Verilog-A GFET model
+│   └── graphene_fet.sv         # Verilog-A GFET model
 ├── notebooks/
 │   └── GFET_IV_curves.ipynb   # Jupyter notebook for analysis
 ├── src/
@@ -63,7 +63,7 @@ This runs a demo showing transfer and output curves.
 
 ### Verilog-A Model
 
-The `models/graphene_fet.va` file can be compiled and used with:
+The `models/graphene_fet.sv` file can be compiled and used with:
 - Ngspice (with ADMS)
 - Cadence Spectre
 - Synopsis HSPICE (with Verilog-A support)
